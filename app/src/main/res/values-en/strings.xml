@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cheese</string>
+
+    <!-- Home -->
+    <string name="label_model">Model</string>
+    <string name="label_kernel">Kernel</string>
+    <string name="label_ksu_manager">KernelSU manager</string>
+    <string name="label_ksu_installed"> (installed)</string>
+    <string name="label_ksu_missing"> (not installed)</string>
+
+    <string name="label_attempt">CHEESE_ATTEMPT</string>
+    <string name="label_attempt_summary">Start from this candidate physical address (empty = 0)</string>
+    <string name="label_phyaddr">CHEESE_PHYADDR</string>
+    <string name="label_phyaddr_summary">Try one specific candidate physical address</string>
+    <string name="label_no_retry">CHEESE_NO_RETRY</string>
+    <string name="label_no_retry_summary">Only try a single candidate</string>
+
+    <string name="action_run">Run</string>
+    <string name="action_running">Running…</string>
+
+    <string name="log_title">Log</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_copy_log">Copy log</string>
+
+    <!-- Common -->
+    <string name="action_back">Back</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_about">About</string>
+
+    <!-- About -->
+    <string name="about_intro">Runs the cheese exploit (CVE-2025-21479, Adreno GPU) for a temporary root shell and loads KernelSU through ksud late-load. The offsets are computed from a kernel image on the device itself.</string>
+    <string name="about_credits">Credits</string>
+    <string name="about_credits_body">Built on GhostLock by YuKongA (Apache-2.0) — the UI, build wiring and offset extractor started from that project. GhostLock in turn builds on NebuSec/CyberMeowfia, JoinChang/ghostlock-oneplus and x-spy/CVE-2026-43499-popsicle.</string>
+    <string name="about_license">License</string>
+    <string name="about_license_body">Apache License 2.0 — see LICENSE in the repository.</string>
+    <string name="about_disclaimer">Disclaimer</string>
+    <string name="about_disclaimer_body">For authorized security research on devices you own only. The offsets, KMI and exploit target one kernel/firmware family — running it anywhere else can brick the device. A temporary root stops working after a reboot.</string>
+    <string name="about_github">GitHub repository</string>
+    <string name="cloud_configs">Cloud configs</string>
+    <string name="cloud_configs_summary">Fetch a config from the shared bucket</string>
+    <string name="cloud_loading">Fetching the list…</string>
+    <string name="cloud_empty">Nothing published yet</string>
+    <string name="about_build">Build</string>
+    <string name="label_soc">SoC</string>
+    <string name="advanced_settings">Run settings</string>
+    <string name="advanced_settings_summary">ROOT_CMD and cheese options</string>
+    <string name="action_close">Close</string>
+    <string name="about_action">About</string>
+    <string name="about_action_summary">Version, credits and disclaimer</string>
+    <string name="load_config_title">Load config</string>
+    <string name="action_import_offsets_json">Import offsets.json</string>
+    <string name="parse_ota">Parse OTA link</string>
+    <string name="parse_ota_hint">Pull the boot image out of a full OTA link and compute the offsets (only the needed partition is downloaded)</string>
+    <string name="parse_ota_url_label">OTA link (http/https)</string>
+    <string name="parse_ota_url_invalid">The link must start with http:// or https://</string>
+    <string name="parse_local">Parse local image</string>
+    <string name="local_image_title">Image kind</string>
+    <string name="saved_configs">Saved configs</string>
+    <string name="saved_configs_empty">Nothing saved yet: a successful parse or import is stored automatically.</string>
+    <string name="loaded_badge">Loaded</string>
+    <string name="status_busy">Working</string>
+    <string name="status_busy_summary">Hang on, progress shows up in the log</string>
+    <string name="status_ready">Config ready</string>
+    <string name="status_ready_summary">Config saved</string>
+    <string name="status_imported">Imported config</string>
+    <string name="status_missing">Config required</string>
+    <string name="status_missing_summary">Get the offsets from a local image, an OTA link or offsets.json</string>
+    <string name="action_start">Start</string>
+    <string name="config_preview">Config preview</string>
+    <string name="action_use_config">Use this config</string>
+    <string name="action_share">Share</string>
+    <string name="action_delete">Delete</string>
+    <string name="delete_config_title">Delete config?</string>
+    <string name="delete_config_message">It cannot be restored from inside the app — parse the image or import the JSON again.</string>
+    <string name="share_config_chooser">Share config</string>
+    <string name="config_preview_raw">Raw configuration file</string>
+    <string name="shizuku_card_title">Stellar</string>
+    <string name="root_cmd_custom">Custom ROOT_CMD</string>
+    <string name="root_cmd_custom_hint">A custom command takes precedence when set</string>
+    <string name="manager_picker_title">Manager</string>
+    <string name="label_log_path">CHEESE_LOG</string>
+    <string name="label_log_path_summary">cheese log path, empty means /data/local/tmp/cheese.log</string>
+</resources>

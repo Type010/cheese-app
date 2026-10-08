@@ -1,0 +1,16 @@
+local.properties
+.gradle/
+.idea/
+.kotlin/
+*.iml
+build/
+/.build/
+__pycache__
+
+tools/extract_rs/target/
+target/
+
+*.jks
+*.keystore
+
+/.codex/

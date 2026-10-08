@@ -1,0 +1,59 @@
+Cheese
+Copyright 2026 The Cheese contributors
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this project except in compliance with the License. You may obtain a copy
+of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations under
+the License.
+
+--------------------------------------------------------------------------------
+Attribution notices
+--------------------------------------------------------------------------------
+
+Derived from
+------------
+YuKongA/ghostlock-app <https://github.com/YuKongA/ghostlock-app>
+    Apache License 2.0. The Miuix UI skeleton, the Gradle build setup and the
+    kernel-offset extractor originate in this project; this repository is a
+    heavily modified subset of it.
+
+Bundled native code
+-------------------
+app/src/main/jniLibs/*/libcheese.so
+    A build of the CVE-2025-21479 ("cheese") Adreno GPU exploit, derived from:
+        zhuowei/cheese                     <https://github.com/zhuowei/cheese>
+        sarabpal-dev/cheese-cake           <https://github.com/sarabpal-dev/cheese-cake>
+        Qingizi7/cve-2025-21479_iqooneo8   <https://github.com/Qingizi7/cve-2025-21479_iqooneo8>
+    None of these upstream repositories declares a license. They are credited
+    here as the origin of the technique and of parts of the source.
+
+app/src/main/jniLibs/*/libextract.so
+    A build of the Rust extractor in tools/extract_rs, part of this repository.
+
+Third-party libraries compiled into the app
+-------------------------------------------
+Miuix (top.yukonga.miuix.kmp)  <https://github.com/compose-miuix-ui/miuix>
+    Apache License 2.0.
+Shizuku API (dev.rikka.shizuku) <https://github.com/RikkaApps/Shizuku-API>
+    MIT License.
+AndroidX / Jetpack Compose      <https://developer.android.com/jetpack>
+    Apache License 2.0.
+Apache Commons Compress (org.apache.commons:commons-compress)
+    Apache License 2.0.
+
+Used at runtime, not distributed
+--------------------------------
+KernelSU <https://github.com/tiann/KernelSU>
+    GPL-3.0. Not linked against and not redistributed: the app only executes
+    the libksud.so shipped by a KernelSU-compatible manager that the user has
+    installed on their own device.
+Stellar <https://github.com/roro2239/Stellar>
+    MPL-2.0 for its modifications, Apache-2.0 for the original Shizuku. Used as
+    an external service through the Shizuku API; no source is copied here.

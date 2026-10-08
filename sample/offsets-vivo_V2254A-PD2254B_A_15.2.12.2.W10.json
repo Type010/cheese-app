@@ -1,0 +1,13 @@
+{
+  "name": "offsets-V2254A-PD2254B_A_15.2.12.2.W10.json",
+  "device": "vivo V2254A",
+  "build": "PD2254B_A_15.2.12.2.W10",
+  "source": "import",
+  "kernel_release": "5.15.178-g3dc7c01077b8-dirty",
+  "kernel_base": "0xa8000000",
+  "init_task": 49359808,
+  "init_task_hex": "0x2f12bc0",
+  "swapper_pg_dir": 44916736,
+  "swapper_pg_dir_hex": "0x2ad6000",
+  "verified": true
+}
