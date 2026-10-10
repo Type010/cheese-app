@@ -97,10 +97,10 @@ class ConfigStore(private val context: Context) {
         return runCatching {
             val json = JSONObject(raw)
             RunConfig(
+                viaShizuku = json.optBoolean("via_shizuku", false),
                 manager = KsuManager.entries.firstOrNull { it.name == json.optString("manager") }
                     ?: KsuManager.KernelSU,
                 customRootCmd = json.optString("custom_root_cmd"),
-                logPath = json.optString("log_path"),
                 attempt = json.optString("attempt"),
                 phyAddr = json.optString("phy_addr"),
                 noRetry = json.optBoolean("no_retry", false),
@@ -110,9 +110,9 @@ class ConfigStore(private val context: Context) {
 
     fun saveRunConfig(config: RunConfig) {
         val json = JSONObject().apply {
+            put("via_shizuku", config.viaShizuku)
             put("manager", config.manager.name)
             put("custom_root_cmd", config.customRootCmd)
-            put("log_path", config.logPath)
             put("attempt", config.attempt)
             put("phy_addr", config.phyAddr)
             put("no_retry", config.noRetry)

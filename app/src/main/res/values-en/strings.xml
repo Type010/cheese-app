@@ -76,9 +76,9 @@
     <string name="share_config_chooser">Share config</string>
     <string name="config_preview_raw">Raw configuration file</string>
     <string name="shizuku_card_title">Stellar</string>
+    <string name="label_exec_via_shizuku">Run through Shizuku</string>
+    <string name="label_exec_via_shizuku_summary">Skips the seccomp bypass</string>
     <string name="root_cmd_custom">Custom ROOT_CMD</string>
     <string name="root_cmd_custom_hint">A custom command takes precedence when set</string>
     <string name="manager_picker_title">Manager</string>
-    <string name="label_log_path">CHEESE_LOG</string>
-    <string name="label_log_path_summary">cheese log path, empty means /data/local/tmp/cheese.log</string>
 </resources>

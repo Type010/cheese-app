@@ -15,6 +15,12 @@
   → 运行 cheese：两个偏移作为环境变量传入，提权成功后由 ROOT_CMD 加载 KernelSU
 ```
 
+默认以 **app 身份**直接执行 cheese。应用进程继承的 seccomp 过滤器会拦掉触发用的
+`vhangup(2)` 和 ksud late-load 用的 `finit_module(2)`，所以 cheese 拿到内核写能力后
+会先清掉自己 `task_struct` 上的 `TIF_SECCOMP` 与 `seccomp.mode`。主页的
+「通过 Shizuku 执行」开关改为以 shell 身份运行（`Seccomp: 0`，跳过这一步，需要
+Stellar 就绪）。
+
 `ROOT_CMD` 默认是：
 
 ```sh

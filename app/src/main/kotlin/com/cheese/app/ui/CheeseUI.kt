@@ -88,6 +88,7 @@ import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.nav.core.NavBackStack
 import top.yukonga.miuix.kmp.nav.core.NavDisplay
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
 import top.yukonga.miuix.kmp.nav.core.navBackStackOf
 import top.yukonga.miuix.kmp.nav.core.rememberNavSystemCornerRadius
@@ -306,6 +307,18 @@ private fun MainScreen(
                     )
                 }
             }
+            item(key = "exec-mode") {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    SwitchPreference(
+                        checked = state.runConfig.viaShizuku,
+                        onCheckedChange = { checked ->
+                            actions.onUpdateRunConfig { it.copy(viaShizuku = checked) }
+                        },
+                        title = stringResource(R.string.label_exec_via_shizuku),
+                        summary = stringResource(R.string.label_exec_via_shizuku_summary),
+                    )
+                }
+            }
             item(key = "run") {
                 TextButton(
                     text = stringResource(
@@ -316,9 +329,11 @@ private fun MainScreen(
                     enabled = if (state.running) {
                         true
                     } else {
+                        // Only the shell-identity path needs Stellar: an
+                        // in-process run clears its own seccomp filter.
                         state.offsets != null &&
-                            state.shizukuStatus == ShizukuStatus.Ready &&
-                            !state.busy
+                            !state.busy &&
+                            (!state.runConfig.viaShizuku || state.shizukuStatus == ShizukuStatus.Ready)
                     },
                     colors = ButtonDefaults.textButtonColorsPrimary(),
                     onClick = if (state.running) actions.onShowExecutionSheet else actions.onRun,

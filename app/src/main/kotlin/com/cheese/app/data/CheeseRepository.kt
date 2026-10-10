@@ -1,13 +1,16 @@
 package com.cheese.app.data
 
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.provider.MediaStore
 import android.util.Log
 import com.cheese.app.data.cloud.CloudConfigs
 import com.cheese.app.data.cloud.CloudEntry
 import com.cheese.app.data.ota.OtaPayloadExtractor
 import com.cheese.app.domain.ConfigSource
 import com.cheese.app.domain.DEFAULT_KERNEL_BASE
+import com.cheese.app.domain.DEFAULT_LOG_DIR
 import com.cheese.app.domain.imageMatchesDevice
 import com.cheese.app.domain.rejectionReason
 import com.cheese.app.shizuku.ShizukuRunner
@@ -15,7 +18,7 @@ import com.cheese.app.shizuku.ShizukuStatus
 import com.cheese.app.domain.CheeseOffsets
 import com.cheese.app.domain.ParseOutcome
 import com.cheese.app.domain.RunConfig
-import com.cheese.app.domain.effectiveLogPath
+import com.cheese.app.domain.cheeseLogPath
 import com.cheese.app.domain.effectiveRootCmd
 import com.cheese.app.domain.formatHex
 import com.cheese.app.domain.parseHexOrNull
@@ -51,8 +54,15 @@ class CheeseRepository(private val context: Context) {
 
     fun requestShizukuPermission() = shizuku.requestPermission()
 
-    /** Kill the cheese run started by [runCheese], if one is still going. */
-    fun cancelCheese() = shizuku.cancel()
+    /** Kill the cheese run started by [runCheese], whichever path it took. */
+    fun cancelCheese() {
+        shizuku.cancel()
+        runCatching { directProcess?.destroy() }
+    }
+
+    /** The in-process cheese run, so [cancelCheese] can stop it. */
+    @Volatile
+    private var directProcess: Process? = null
 
     /** Parse an image picked through SAF; [source] says which entry point it came from. */
     suspend fun parseImage(
@@ -262,9 +272,12 @@ class CheeseRepository(private val context: Context) {
 
     /**
      * Run cheese with the two offsets in the environment; manager activation is
-     * left to `ROOT_CMD`. The run goes through Stellar, so cheese inherits the
-     * service's identity (shell/root, no seccomp filter) — running as the app
-     * always dies at the final vhangup() syscall.
+     * left to `ROOT_CMD`.
+     *
+     * An in-process run (the default) inherits this app's seccomp filter, which
+     * rejects the vhangup() the trigger goes through, so cheese clears its own
+     * filter once the kernel write primitive is up. The Shizuku path runs cheese
+     * with the service's identity (shell/root, Seccomp 0) and skips that stage.
      */
     suspend fun runCheese(
         offsets: CheeseOffsets,
@@ -276,15 +289,23 @@ class CheeseRepository(private val context: Context) {
             onLine("error: 缺少 $CHEESE_BINARY（请重新安装 APK）")
             return@withContext 127
         }
-        if (shizukuStatus != ShizukuStatus.Ready) {
-            onLine("error: Stellar 未就绪，无法执行（vhangup 阶段需要 shell 身份）")
+        if (config.viaShizuku && shizukuStatus != ShizukuStatus.Ready) {
+            onLine("error: Stellar 未就绪，无法执行（shell 身份路径依赖它）")
             return@withContext -1
         }
         onLine(
             "info: 偏移 ${formatHex(offsets.initTaskOff)} / ${formatHex(offsets.swapperPgDirOff)}" +
                 "，KERNEL_BASE ${formatHex(offsets.kernelBase)}",
         )
-        val logPath = config.effectiveLogPath()
+        val logPath = cheeseLogPath()
+        if (config.viaShizuku) {
+            onLine("info: 经 Shizuku 执行（shell 身份，Seccomp=0，跳过 seccomp bypass）")
+        } else {
+            onLine("info: 以 app 身份执行（cheese 自己清除 seccomp 过滤器）")
+            if (!prepareLogFile(logPath)) {
+                onLine("warn: 无法在 Download/cheese-app 下创建日志文件，日志只走面板")
+            }
+        }
         onLine("info: cheese 日志 $logPath")
         val env = buildMap {
             put("CHEESE_INIT_TASK_OFF", formatHex(offsets.initTaskOff))
@@ -296,12 +317,53 @@ class CheeseRepository(private val context: Context) {
             config.phyAddr.trim().takeIf { it.isNotEmpty() }?.let { put("CHEESE_PHYADDR", it) }
             if (config.noRetry) put("CHEESE_NO_RETRY", "1")
         }
-        shizuku.runScript(
-            script = buildShellScript(env, binary.absolutePath),
-            workDir = SHELL_TMP_DIR,
-            timeoutSeconds = RUN_TIMEOUT_SECONDS,
-            onLine = onLine,
-        )
+        if (config.viaShizuku) {
+            shizuku.runScript(
+                script = buildShellScript(env, binary.absolutePath, logPath),
+                workDir = SHELL_TMP_DIR,
+                timeoutSeconds = RUN_TIMEOUT_SECONDS,
+                onLine = onLine,
+            )
+        } else {
+            runProcess(
+                command = listOf(binary.absolutePath),
+                // /data/local/tmp is shell-owned; cheese writes no relative path,
+                // so the app's own directory is a safe working directory.
+                workDir = context.filesDir,
+                env = env,
+                onLine = onLine,
+                timeoutSeconds = RUN_TIMEOUT_SECONDS,
+                register = { directProcess = it },
+            )
+        }
+    }
+
+    /**
+     * Create the run's log file through MediaStore so cheese can append to it.
+     *
+     * An app cannot create files under /sdcard by path (scoped storage), and
+     * cheese opens CHEESE_LOG with O_CREAT as this app's uid — which the storage
+     * layer allows only for a file this app owns. The insert below creates the
+     * file and its directory and makes this app the owner, so the very same path
+     * can then be opened for writing. False means cheese keeps only the panel.
+     */
+    private fun prepareLogFile(path: String): Boolean {
+        val relative = DEFAULT_LOG_DIR
+            .removePrefix("/sdcard/")
+            .removePrefix("/storage/emulated/0/")
+            .trim('/')
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, path.substringAfterLast('/'))
+            put(MediaStore.Downloads.RELATIVE_PATH, relative)
+            put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+        }
+        val uri = runCatching {
+            context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+        }.getOrNull() ?: return false
+        /* MediaStore creates the row eagerly but the file itself on first write. */
+        return runCatching {
+            context.contentResolver.openOutputStream(uri)?.use { it.write(ByteArray(0)) }
+        }.getOrNull() != null
     }
 
     /**
@@ -309,8 +371,19 @@ class CheeseRepository(private val context: Context) {
      * -c`. The environment is built here rather than passed to newProcess so
      * the child keeps the service's own environment (PATH, ANDROID_ROOT, …)
      * and only the CHEESE_* knobs are overridden.
+     *
+     * cheese opens its log with O_CREAT and creates no directory of its own, so
+     * the log's parent is made first; failing to make it is not fatal, the run
+     * still streams to the panel.
      */
-    private fun buildShellScript(env: Map<String, String>, binary: String): String = buildString {
+    private fun buildShellScript(
+        env: Map<String, String>,
+        binary: String,
+        logPath: String,
+    ): String = buildString {
+        logPath.substringBeforeLast('/', "").takeIf { it.isNotEmpty() }?.let { dir ->
+            append("mkdir -p ").append(shellQuote(dir)).append(" 2>/dev/null || true\n")
+        }
         for ((key, value) in env) {
             append("export ").append(key).append('=').append(shellQuote(value)).append('\n')
         }
@@ -320,13 +393,18 @@ class CheeseRepository(private val context: Context) {
     /** Single-quote a value for `sh`, escaping embedded quotes. */
     private fun shellQuote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
 
-    /** Run a child process, streaming its merged stdout/stderr line by line. */
+    /**
+     * Run a child process, streaming its merged stdout/stderr line by line.
+     * [register] receives the process while it runs and null once it is gone, so
+     * a long run can be cancelled.
+     */
     private fun runProcess(
         command: List<String>,
         workDir: File,
         env: Map<String, String>,
         onLine: (String) -> Unit,
         timeoutSeconds: Long = 1800,
+        register: ((Process?) -> Unit)? = null,
     ): Int {
         val builder = ProcessBuilder(command)
             .directory(workDir)
@@ -338,24 +416,29 @@ class CheeseRepository(private val context: Context) {
             onLine("error: 无法启动 ${command.first()}: ${error.message}")
             return 127
         }
+        register?.invoke(process)
         try {
-            BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8)).use { reader ->
-                while (true) {
-                    val line = reader.readLine() ?: break
-                    onLine(line)
+            try {
+                BufferedReader(InputStreamReader(process.inputStream, Charsets.UTF_8)).use { reader ->
+                    while (true) {
+                        val line = reader.readLine() ?: break
+                        onLine(line)
+                    }
                 }
+            } catch (error: Exception) {
+                Log.w(TAG, "reading process output failed", error)
             }
-        } catch (error: Exception) {
-            Log.w(TAG, "reading process output failed", error)
+            val finished = process.waitFor(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroy()
+                if (!process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) process.destroyForcibly()
+                onLine("error: 超时 ${timeoutSeconds}s，已终止")
+                return -1
+            }
+            return process.exitValue()
+        } finally {
+            register?.invoke(null)
         }
-        val finished = process.waitFor(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)
-        if (!finished) {
-            process.destroy()
-            if (!process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) process.destroyForcibly()
-            onLine("error: 超时 ${timeoutSeconds}s，已终止")
-            return -1
-        }
-        return process.exitValue()
     }
 
     /** Read one offset from either the nested `offsets` object or the root. */

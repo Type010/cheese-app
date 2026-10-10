@@ -1,5 +1,9 @@
 package com.cheese.app.domain
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 /** Default `KERNEL_PHYS_BASE` for the SM8550 family; editable in the UI. */
 const val DEFAULT_KERNEL_BASE: Long = 0xA800_0000L
 
@@ -17,8 +21,8 @@ enum class KsuManager(val packageName: String, val label: String) {
     ReSukiSU("com.resukisu.resukisu", "ReSukiSU"),
 }
 
-/** Where cheese writes its log unless the user names another path. */
-const val DEFAULT_LOG_PATH: String = "/data/local/tmp/cheese.log"
+/** Where cheese writes its logs unless the user names another path. */
+const val DEFAULT_LOG_DIR: String = "/sdcard/Download/cheese-app"
 
 /** Project home page, linked from the About screen. */
 const val REPO_URL: String = "https://github.com/Type010/cheese-app"
@@ -132,6 +136,12 @@ sealed interface ParseOutcome {
 
 /** Everything cheese needs besides the two offsets. */
 data class RunConfig(
+    /**
+     * Run cheese through Shizuku (shell identity, no seccomp filter) instead of
+     * in this process. The filter this app inherits from zygote is what an
+     * in-process run clears itself, so the Shizuku path skips that stage.
+     */
+    val viaShizuku: Boolean = false,
     /** Manager whose libksud.so the built-in ROOT_CMD late-loads. */
     val manager: KsuManager = KsuManager.KernelSU,
     /**
@@ -139,8 +149,6 @@ data class RunConfig(
      * the built-in one is never displayed, only a custom command is.
      */
     val customRootCmd: String = "",
-    /** `CHEESE_LOG`. Empty means [DEFAULT_LOG_PATH]. */
-    val logPath: String = "",
     /** `CHEESE_ATTEMPT`: start from this entry of the candidate physical table. */
     val attempt: String = "",
     /** `CHEESE_PHYADDR`: use this candidate physical address directly. */
@@ -152,8 +160,16 @@ data class RunConfig(
 /** The command actually handed to cheese. */
 fun RunConfig.effectiveRootCmd(): String = customRootCmd.ifBlank { defaultRootCmd(manager) }
 
-/** The log path actually handed to cheese. */
-fun RunConfig.effectiveLogPath(): String = logPath.trim().ifBlank { DEFAULT_LOG_PATH }
+/**
+ * `CHEESE_LOG` for one run: `cheese-<yyyyMMdd-HHmmss>.log` under
+ * [DEFAULT_LOG_DIR] — a fresh file each time, so a run never overwrites the
+ * previous one's record.
+ */
+fun cheeseLogPath(nowMillis: Long = System.currentTimeMillis()): String =
+    "$DEFAULT_LOG_DIR/cheese-${logStamp(nowMillis)}.log"
+
+private fun logStamp(nowMillis: Long): String =
+    SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date(nowMillis))
 
 /** KernelSU outcome, decided from the run log. */
 enum class KsuOutcome {

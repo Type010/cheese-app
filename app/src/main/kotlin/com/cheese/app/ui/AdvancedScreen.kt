@@ -136,22 +136,6 @@ internal fun AdvancedScreen(
                             style = MiuixTheme.textStyles.footnote2,
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
-                        Spacer(Modifier.height(14.dp))
-                        TextField(
-                            value = state.runConfig.logPath,
-                            onValueChange = { value ->
-                                actions.onUpdateRunConfig { it.copy(logPath = value) }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = stringResource(R.string.label_log_path),
-                            singleLine = true,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.label_log_path_summary),
-                            style = MiuixTheme.textStyles.footnote2,
-                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                        )
                     }
                     SwitchPreference(
                         checked = state.runConfig.noRetry,
